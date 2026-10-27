@@ -32,7 +32,7 @@ h2{font-size:18px;margin:0 0 12px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;box-shadow:var(--shadow)}
 .tile b{display:block;font-size:26px;line-height:1.2}
 .tile span{font-size:13px;color:var(--muted)}
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .mode{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;font:inherit;color:var(--text);transition:transform .12s,border-color .12s}
 .mode:hover{border-color:var(--accent);transform:translateY(-2px)}
 .mode .ic{font-size:30px;display:block}
@@ -78,6 +78,11 @@ input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-of
 .fb.ok{color:var(--good)} .fb.no{color:var(--bad)}
 .actions{margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .hint{font-size:13px;color:var(--muted);margin-top:16px}
+.mic{width:84px;height:84px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:36px;margin-top:22px;cursor:pointer}
+.mic.on{background:var(--bad);animation:pulse 1s infinite}
+.mic:disabled{opacity:.4;cursor:default;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}100%{box-shadow:0 0 0 20px rgba(214,69,69,0)}}
+.link{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer}
 .flip{animation:flip .25s ease}
 @keyframes flip{from{transform:rotateX(70deg);opacity:.3}to{transform:none;opacity:1}}
 /* lists */
@@ -105,7 +110,7 @@ label.line select{width:auto}
 .mistakes{text-align:left;width:100%;max-width:400px;margin-top:16px}
 @media (max-width:560px){
   .tiles{grid-template-columns:repeat(2,1fr)}
-  .modes{grid-template-columns:1fr}
+  .modes{grid-template-columns:1fr 1fr}
   .opts{grid-template-columns:1fr}
   .big{font-size:32px}
   nav button{padding:8px 9px}
@@ -288,6 +293,7 @@ document.addEventListener('keydown', e => { if(onKey) onKey(e); });
 $('#nav').addEventListener('click', e => { const b=e.target.closest('button'); if(b) go(b.dataset.p); });
 function go(p){
   if(sess && !confirm('Выйти из занятия? Результаты уже сохранены.')) return;
+  stopListening();
   sess = null; page = p; onKey = null;
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.p===p));
   ({home:renderHome, topics:renderTopics, dict:renderDict, settings:renderSettings})[p]();
@@ -314,8 +320,9 @@ function renderHome(){
       <p class="muted small" style="margin-top:-6px">Повторить: <b>${p.due.length}</b> · Новых слов: <b>${p.newNow}</b>. Выберите способ:</p>
       <div class="modes">
         <button class="mode" onclick="start('cards')"><span class="ic">🃏</span><b>Карточки</b><small>Вспомнить перевод</small></button>
-        <button class="mode" onclick="start('test')"><span class="ic">✅</span><b>Тест</b><small>Выбрать из 4 вариантов</small></button>
+        <button class="mode" onclick="start('test')"><span class="ic">✅</span><b>Тест</b><small>Выбрать ответ</small></button>
         <button class="mode" onclick="start('write')"><span class="ic">⌨️</span><b>Написание</b><small>Напечатать слово</small></button>
+        <button class="mode" onclick="start('say')"><span class="ic">🎤</span><b>Говорение</b><small>Сказать слово вслух</small></button>
       </div>`;
   } else {
     const seen = activeWords().filter(w => S.words[w.id]).length;
@@ -327,7 +334,7 @@ function renderHome(){
       </div>
       ${!p.fresh.length && !seen ? '<p class="muted small">Включите темы во вкладке «Темы» или добавьте свои слова в «Словаре».</p>' : ''}
       <p class="muted small">Способ: <select id="modePick" style="width:auto" onchange="lastMode=this.value">
-        <option value="cards">Карточки</option><option value="test">Тест</option><option value="write">Написание</option></select></p>
+        <option value="cards">Карточки</option><option value="test">Тест</option><option value="write">Написание</option><option value="say">Говорение</option></select></p>
     </div>`;
   }
   app.innerHTML = `
@@ -351,6 +358,10 @@ function pickMode(){ return lastMode; }
 // ---------- Занятие ----------
 let sess = null;
 function start(mode, opts={}){
+  if(mode==='say' && !Recog){
+    alert('Распознавание речи работает только в браузерах Google Chrome и Microsoft Edge.\n\nОткройте программу в одном из них.');
+    return;
+  }
   lastMode = mode;
   const t = today(), words = activeWords();
   let items = [];
@@ -428,10 +439,11 @@ function speakBtn(text){ return `<button class="speak" title="Прослушат
 
 function renderStep(){
   onKey = null;
+  stopListening();
   if(sess.i >= sess.items.length) return renderDone();
   const {w, type} = sess.items[sess.i];
   if(type === 'intro') return renderIntro(w);
-  ({cards:renderCard, test:renderTest, write:renderWrite})[sess.mode](w);
+  ({cards:renderCard, test:renderTest, write:renderWrite, say:renderSay})[sess.mode](w);
 }
 
 function renderIntro(w){
@@ -547,6 +559,120 @@ function renderWrite(w){
   $('#chk').onclick = check;
   inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); check(); } });
   onKey = e => { if(done && e.key==='Enter'){ e.preventDefault(); next(); } };
+}
+
+// ---------- Говорение (распознавание речи) ----------
+const Recog = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function stopListening(){ if(rec){ rec.onresult = rec.onerror = rec.onend = null; try{ rec.abort(); }catch(e){} rec = null; } }
+
+// Слова, которые на слух звучат одинаково: распознавание может написать любое из них
+const SOUNDS_LIKE = {
+  one:['won','1'], two:['to','too','2'], three:['3'], four:['for','4'], five:['5'], ten:['10'],
+  hundred:['100','one hundred'], thousand:['1000','1,000','one thousand'], first:['1st'],
+  eye:['i'], see:['sea','c'], sea:['see','c'], know:['no'], no:['know'], hour:['our'],
+  son:['sun'], be:['bee','b'], tea:['t','tee'], buy:['by','bye'], write:['right','rite'],
+  meat:['meet'], week:['weak'], new:['knew'], road:['rode'], plane:['plain'], hair:['hare'],
+  'thank you':['thanks','thank-you'], 't-shirt':['tshirt','t shirt','tee shirt'], weekend:['week end'],
+  goodbye:['good bye','bye'], hello:['hallo','hullo'], ok:['okay']
+};
+function normSay(s){
+  return norm(s).replace(/[,!?]/g,'').replace(/\s*-\s*/g,' ').replace(/^(a|an|the) /,'').replace(/\s+/g,' ').trim();
+}
+function saidRight(heard, w){
+  const answers = [];
+  for(const a of w.en.split('/')){
+    answers.push(normSay(a));
+    (SOUNDS_LIKE[norm(a)] || []).forEach(x => answers.push(normSay(x)));
+  }
+  for(const h0 of heard){
+    const h = normSay(h0);
+    for(const a of answers){
+      if(h===a || (' '+h+' ').includes(' '+a+' ')) return true;
+      const hc = h.replace(/ /g,''), ac = a.replace(/ /g,'');
+      if(hc===ac || (ac.length>=5 && distance(hc,ac)<=1)) return true;
+    }
+  }
+  return false;
+}
+
+function renderSay(w){
+  frame(`<span class="badge">Скажите по-английски</span>
+    <div class="big">${esc(w.ru)}</div>
+    <button class="mic" id="mic" title="Говорить">🎤</button>
+    <div class="fb muted" id="fb">Нажмите на микрофон и скажите слово</div>
+    <div class="actions" id="act"><button class="btn" id="skip">Не знаю</button></div>
+    <div class="hint">Пробел — говорить · Попыток: 2</div>`);
+  let tries = 0, finished = false;
+  const fb = $('#fb'), mic = $('#mic');
+  const say = (cls, html) => { fb.className = 'fb ' + cls; fb.innerHTML = html; };
+
+  // Ответ закончен: показываем правильное слово, оценку ставим по кнопке
+  const finish = (ok, heardText, canOverride) => {
+    finished = true; stopListening();
+    mic.classList.remove('on'); mic.disabled = true;
+    if(ok){
+      say('ok', `✓ Правильно! Вы сказали: «${esc(heardText)}»` + pron(w));
+      grade(w, true); speak(w.en);
+      setTimeout(() => { if(sess && sess.items[sess.i] && sess.items[sess.i].w===w) next(); }, 1300);
+      $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>`;
+      $('#nx').onclick = next;
+      onKey = e => { if(e.key==='Enter'){ e.preventDefault(); next(); } };
+      return;
+    }
+    say('no', (heardText ? `Вы сказали: «${esc(heardText)}»<br>` : '') + `Правильно: <b>${esc(w.en)}</b>` + pron(w));
+    speak(w.en);
+    const go = right => { grade(w, right); next(); };
+    $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>` +
+      (canOverride ? `<br><button class="link" id="ovr">Компьютер ошибся, засчитать</button>` : '');
+    $('#nx').onclick = () => go(false);
+    if(canOverride) $('#ovr').onclick = () => go(true);
+    onKey = e => { if(e.key==='Enter'){ e.preventDefault(); go(false); } };
+  };
+
+  const listen = () => {
+    if(finished || rec) return;
+    if('speechSynthesis' in window) speechSynthesis.cancel();
+    const r = rec = new Recog();
+    r.lang = 'en-US'; r.interimResults = false; r.maxAlternatives = 5; r.continuous = false;
+    // Сообщения от старого (уже остановленного) прослушивания не должны менять экран
+    const stale = () => r !== rec || finished;
+    let got = false;
+    r.onresult = e => {
+      if(stale()) return;
+      got = true;
+      const heard = Array.from(e.results[0]).map(x => x.transcript);
+      rec = null; mic.classList.remove('on');
+      if(saidRight(heard, w)) return finish(true, heard[0]);
+      tries++;
+      if(tries < 2) say('no', `Вы сказали: «${esc(heard[0])}». Не совсем, попробуйте ещё раз.`);
+      else finish(false, heard[0], true);
+    };
+    r.onerror = e => {
+      if(stale()) return;
+      got = true; rec = null; mic.classList.remove('on');
+      const msgs = {
+        'no-speech':'Ничего не услышал. Нажмите на микрофон и скажите слово погромче.',
+        'not-allowed':'Нет доступа к микрофону. Нажмите на значок замка или микрофона слева в адресной строке и выберите «Разрешить».',
+        'service-not-allowed':'Нет доступа к микрофону. Разрешите его в настройках браузера.',
+        'network':'Для распознавания речи нужен интернет. Проверьте подключение.',
+        'audio-capture':'Микрофон не найден. Проверьте, что он подключён.'
+      };
+      if(e.error !== 'aborted') say('no', msgs[e.error] || 'Не получилось распознать. Попробуйте ещё раз.');
+    };
+    r.onend = () => { if(stale() || got) return; rec = null; mic.classList.remove('on'); say('muted', 'Ничего не услышал. Нажмите на микрофон ещё раз.'); };
+    try{ r.start(); }catch(err){ rec = null; return; }
+    mic.classList.add('on');
+    say('muted', '🔴 Слушаю… говорите');
+  };
+
+  mic.onclick = () => {
+    if(!rec) return listen();
+    stopListening(); mic.classList.remove('on');
+    say('muted', 'Нажмите на микрофон и скажите слово');
+  };
+  $('#skip').onclick = () => finish(false, '', false);
+  onKey = e => { if(e.key===' ' && !finished){ e.preventDefault(); mic.click(); } };
 }
 
 function renderDone(){
