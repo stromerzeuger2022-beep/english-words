@@ -82,6 +82,8 @@ input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-of
 .mic.on{background:var(--bad);animation:pulse 1s infinite}
 .mic:disabled{opacity:.4;cursor:default;animation:none}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}100%{box-shadow:0 0 0 20px rgba(214,69,69,0)}}
+.lvl{width:140px;height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.lvl i{display:block;height:100%;width:0;background:var(--good);transition:width .08s}
 .link{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer}
 .flip{animation:flip .25s ease}
 @keyframes flip{from{transform:rotateX(70deg);opacity:.3}to{transform:none;opacity:1}}
@@ -293,7 +295,7 @@ document.addEventListener('keydown', e => { if(onKey) onKey(e); });
 $('#nav').addEventListener('click', e => { const b=e.target.closest('button'); if(b) go(b.dataset.p); });
 function go(p){
   if(sess && !confirm('Выйти из занятия? Результаты уже сохранены.')) return;
-  stopListening();
+  stopListening(); disableMic();
   sess = null; page = p; onKey = null;
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.p===p));
   ({home:renderHome, topics:renderTopics, dict:renderDict, settings:renderSettings})[p]();
@@ -566,6 +568,42 @@ const Recog = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
 function stopListening(){ if(rec){ rec.onresult = rec.onerror = rec.onend = null; try{ rec.abort(); }catch(e){} rec = null; } }
 
+// Микрофон включаем по нажатию кнопки: только так Chrome надёжно спрашивает разрешение.
+// Поток держим открытым, пока идёт занятие, — по нему рисуем полоску громкости.
+let micStream = null, micLevel = 0;
+async function enableMic(){
+  if(micStream) return;
+  micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 512;
+    ctx.createMediaStreamSource(micStream).connect(an);
+    const buf = new Uint8Array(an.fftSize);
+    micStream.ctx = ctx;
+    const tick = () => {
+      if(!micStream) return;
+      an.getByteTimeDomainData(buf);
+      let peak = 0; for(const v of buf) peak = Math.max(peak, Math.abs(v-128));
+      micLevel = Math.min(1, peak/50);
+      const bar = document.querySelector('#lvl i');
+      if(bar) bar.style.width = Math.round(micLevel*100) + '%';
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }catch(e){}
+}
+function disableMic(){
+  if(!micStream) return;
+  micStream.getTracks().forEach(t => t.stop());
+  if(micStream.ctx) micStream.ctx.close();
+  micStream = null;
+}
+const MIC_ERRORS = {
+  NotAllowedError:'Доступ к микрофону запрещён. Нажмите на значок слева от адреса страницы, у пункта «Микрофон» выберите «Разрешить» и нажмите кнопку ещё раз.',
+  NotFoundError:'Микрофон не найден. Проверьте, что он подключён к компьютеру.',
+  NotReadableError:'Микрофон занят другой программой (например, Zoom или Skype). Закройте её и попробуйте ещё раз.'
+};
+
 // Слова, которые на слух звучат одинаково: распознавание может написать любое из них
 const SOUNDS_LIKE = {
   one:['won','1'], two:['to','too','2'], three:['3'], four:['for','4'], five:['5'], ten:['10'],
@@ -600,7 +638,9 @@ function renderSay(w){
   frame(`<span class="badge">Скажите по-английски</span>
     <div class="big">${esc(w.ru)}</div>
     <button class="mic" id="mic" title="Пауза / продолжить">🎤</button>
+    <div class="lvl" id="lvl" title="Громкость микрофона"><i></i></div>
     <div class="fb muted" id="fb">Включаю микрофон…</div>
+    <div id="enableBox"></div>
     <div class="actions" id="act">
       <button class="btn" id="dunno">Не знаю</button>
       <button class="btn" id="skip">Пропустить</button>
@@ -704,10 +744,28 @@ function renderSay(w){
   };
   $('#skip').onclick = () => { if(finished) return; finished = true; stopListening(); grade(w, false); next(); };
   onKey = e => { if(e.key===' ' && !finished){ e.preventDefault(); mic.click(); } };
-  listenWhenQuiet();
+
+  if(micStream) return listenWhenQuiet();
+  // Первый раз за занятие — просим включить микрофон кнопкой
+  paused = true;
+  say('muted', 'Чтобы программа вас слышала, включите микрофон.');
+  $('#enableBox').innerHTML = `<button class="btn primary" id="enable" style="margin-top:10px">🎤 Включить микрофон</button>`;
+  $('#enable').onclick = async () => {
+    $('#enable').disabled = true;
+    say('muted', 'Если Chrome спросит про микрофон — нажмите «Разрешить».');
+    try{
+      await enableMic();
+      $('#enableBox').innerHTML = '';
+      resume();
+    }catch(err){
+      $('#enable').disabled = false;
+      say('no', MIC_ERRORS[err.name] || ('Не удалось включить микрофон: ' + esc(err.message || err.name)));
+    }
+  };
 }
 
 function renderDone(){
+  disableMic();
   const total = sess.right + sess.wrong;
   const pct = total ? Math.round(sess.right/total*100) : 100;
   const {right, mistakes} = sess;
