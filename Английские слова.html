@@ -57,6 +57,9 @@ h2{font-size:18px;margin:0 0 12px}
 .badge.new{background:var(--warn-soft);color:var(--warn)}
 .big{font-size:40px;font-weight:700;line-height:1.2;word-break:break-word}
 .tr{font-size:24px;margin-top:10px}
+.pr{font-size:20px;color:var(--muted);margin-top:4px}
+.pr-s{font-size:13px;color:var(--muted)}
+.opt .pr-s{margin-left:auto}
 .speak{border:0;background:var(--accent-soft);color:var(--accent);width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;margin:12px 0 0}
 .speak.mini{width:32px;height:32px;font-size:15px;margin:0}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:24px}
@@ -125,76 +128,77 @@ label.line select{width:auto}
 
 <script>
 // ---------- Готовые наборы слов ----------
+// [английское, перевод, как звучит по-русски (большая буква — ударение)]
 const TOPICS = [
   {key:'basics', icon:'👋', name:'Основы', words:[
-    ['hello','привет'],['goodbye','до свидания'],['please','пожалуйста'],['thank you','спасибо'],
-    ['yes','да'],['no','нет'],['sorry','извините'],['excuse me','простите'],
-    ['good morning','доброе утро'],['good night','спокойной ночи'],['friend','друг'],['name','имя'],
-    ['man','мужчина'],['woman','женщина'],['child','ребёнок'],['people','люди']]},
+    ['hello','привет','хэлОу'],['goodbye','до свидания','гудбАй'],['please','пожалуйста','плиз'],['thank you','спасибо','сэнк ю'],
+    ['yes','да','йес'],['no','нет','ноу'],['sorry','извините','сОри'],['excuse me','простите','икскьЮз ми'],
+    ['good morning','доброе утро','гуд мОрнинг'],['good night','спокойной ночи','гуд найт'],['friend','друг','фрэнд'],['name','имя','нэйм'],
+    ['man','мужчина','мэн'],['woman','женщина','вУмэн'],['child','ребёнок','чайлд'],['people','люди','пипл']]},
   {key:'family', icon:'👨‍👩‍👧', name:'Семья', words:[
-    ['family','семья'],['mother','мать'],['father','отец'],['parents','родители'],
-    ['son','сын'],['daughter','дочь'],['brother','брат'],['sister','сестра'],
-    ['husband','муж'],['wife','жена'],['grandmother','бабушка'],['grandfather','дедушка'],
-    ['uncle','дядя'],['aunt','тётя'],['baby','младенец'],['cousin','двоюродный брат / сестра']]},
+    ['family','семья','фЭмили'],['mother','мать','мАзэр'],['father','отец','фАзэр'],['parents','родители','пЭрэнтс'],
+    ['son','сын','сан'],['daughter','дочь','дОтэр'],['brother','брат','брАзэр'],['sister','сестра','сИстэр'],
+    ['husband','муж','хАзбэнд'],['wife','жена','вайф'],['grandmother','бабушка','грЭндмазэр'],['grandfather','дедушка','грЭндфазэр'],
+    ['uncle','дядя','анкл'],['aunt','тётя','энт'],['baby','младенец','бЭйби'],['cousin','двоюродный брат / сестра','казн']]},
   {key:'food', icon:'🍎', name:'Еда и напитки', words:[
-    ['bread','хлеб'],['water','вода'],['milk','молоко'],['meat','мясо'],
-    ['fish','рыба'],['egg','яйцо'],['cheese','сыр'],['apple','яблоко'],
-    ['potato','картофель'],['tea','чай'],['coffee','кофе'],['sugar','сахар'],
-    ['salt','соль'],['soup','суп'],['breakfast','завтрак'],['lunch','обед'],
-    ['dinner','ужин'],['juice','сок']]},
+    ['bread','хлеб','брэд'],['water','вода','вОтэр'],['milk','молоко','милк'],['meat','мясо','мит'],
+    ['fish','рыба','фиш'],['egg','яйцо','эг'],['cheese','сыр','чиз'],['apple','яблоко','эпл'],
+    ['potato','картофель','пэтЭйтоу'],['tea','чай','ти'],['coffee','кофе','кОфи'],['sugar','сахар','шУгэр'],
+    ['salt','соль','солт'],['soup','суп','суп'],['breakfast','завтрак','брЭкфэст'],['lunch','обед','ланч'],
+    ['dinner','ужин','дИнэр'],['juice','сок','джус']]},
   {key:'home', icon:'🏠', name:'Дом', words:[
-    ['house','дом'],['room','комната'],['kitchen','кухня'],['bedroom','спальня'],
-    ['bathroom','ванная'],['door','дверь'],['window','окно'],['table','стол'],
-    ['chair','стул'],['bed','кровать'],['floor','пол'],['wall','стена'],
-    ['key','ключ'],['lamp','лампа'],['sofa','диван'],['mirror','зеркало']]},
+    ['house','дом','хаус'],['room','комната','рум'],['kitchen','кухня','кИчэн'],['bedroom','спальня','бЭдрум'],
+    ['bathroom','ванная','бЭсрум'],['door','дверь','дор'],['window','окно','вИндоу'],['table','стол','тэйбл'],
+    ['chair','стул','чер'],['bed','кровать','бэд'],['floor','пол','флор'],['wall','стена','вол'],
+    ['key','ключ','ки'],['lamp','лампа','лэмп'],['sofa','диван','сОуфа'],['mirror','зеркало','мИрэр']]},
   {key:'body', icon:'🧍', name:'Тело', words:[
-    ['head','голова'],['hand','кисть руки'],['arm','рука'],['leg','нога'],
-    ['foot','ступня'],['eye','глаз'],['ear','ухо'],['nose','нос'],
-    ['mouth','рот'],['hair','волосы'],['face','лицо'],['tooth','зуб'],
-    ['back','спина'],['heart','сердце'],['finger','палец'],['neck','шея']]},
+    ['head','голова','хэд'],['hand','кисть руки','хэнд'],['arm','рука','арм'],['leg','нога','лэг'],
+    ['foot','ступня','фут'],['eye','глаз','ай'],['ear','ухо','ир'],['nose','нос','ноуз'],
+    ['mouth','рот','маус'],['hair','волосы','хер'],['face','лицо','фэйс'],['tooth','зуб','тус'],
+    ['back','спина','бэк'],['heart','сердце','харт'],['finger','палец','фИнгэр'],['neck','шея','нэк']]},
   {key:'clothes', icon:'👕', name:'Одежда', words:[
-    ['shirt','рубашка'],['trousers','брюки'],['dress','платье'],['shoes','обувь'],
-    ['coat','пальто'],['jacket','куртка'],['hat','шапка, шляпа'],['sock','носок'],
-    ['skirt','юбка'],['T-shirt','футболка'],['sweater','свитер'],['gloves','перчатки'],
-    ['scarf','шарф'],['belt','ремень'],['bag','сумка'],['jeans','джинсы']]},
+    ['shirt','рубашка','шёрт'],['trousers','брюки','трАузэрз'],['dress','платье','дрэс'],['shoes','обувь','шуз'],
+    ['coat','пальто','коут'],['jacket','куртка','джЭкит'],['hat','шапка, шляпа','хэт'],['sock','носок','сок'],
+    ['skirt','юбка','скёрт'],['T-shirt','футболка','тИ-шёрт'],['sweater','свитер','свЭтэр'],['gloves','перчатки','главз'],
+    ['scarf','шарф','скарф'],['belt','ремень','бэлт'],['bag','сумка','бэг'],['jeans','джинсы','джинз']]},
   {key:'city', icon:'🏙️', name:'Город', words:[
-    ['city','город'],['street','улица'],['shop','магазин'],['bank','банк'],
-    ['hospital','больница'],['school','школа'],['park','парк'],['bridge','мост'],
-    ['station','вокзал, станция'],['market','рынок'],['church','церковь'],['library','библиотека'],
-    ['pharmacy','аптека'],['restaurant','ресторан'],['square','площадь'],['building','здание']]},
+    ['city','город','сИти'],['street','улица','стрит'],['shop','магазин','шоп'],['bank','банк','бэнк'],
+    ['hospital','больница','хОспитл'],['school','школа','скул'],['park','парк','парк'],['bridge','мост','бридж'],
+    ['station','вокзал, станция','стЭйшн'],['market','рынок','мАркит'],['church','церковь','чёрч'],['library','библиотека','лАйбрэри'],
+    ['pharmacy','аптека','фАрмэси'],['restaurant','ресторан','рЭсторант'],['square','площадь','скуЭр'],['building','здание','бИлдинг']]},
   {key:'travel', icon:'✈️', name:'Транспорт и поездки', words:[
-    ['car','машина'],['bus','автобус'],['train','поезд'],['plane','самолёт'],
-    ['ticket','билет'],['airport','аэропорт'],['hotel','гостиница'],['passport','паспорт'],
-    ['luggage','багаж'],['map','карта'],['road','дорога'],['trip','поездка'],
-    ['taxi','такси'],['bicycle','велосипед'],['sea','море'],['mountain','гора']]},
+    ['car','машина','кар'],['bus','автобус','бас'],['train','поезд','трэйн'],['plane','самолёт','плэйн'],
+    ['ticket','билет','тИкит'],['airport','аэропорт','Эрпорт'],['hotel','гостиница','хоутЭл'],['passport','паспорт','пЭспорт'],
+    ['luggage','багаж','лАгидж'],['map','карта','мэп'],['road','дорога','роуд'],['trip','поездка','трип'],
+    ['taxi','такси','тЭкси'],['bicycle','велосипед','бАйсикл'],['sea','море','си'],['mountain','гора','мАунтэн']]},
   {key:'work', icon:'💼', name:'Работа', words:[
-    ['job','работа, должность'],['office','офис'],['boss','начальник'],['colleague','коллега'],
-    ['meeting','встреча, собрание'],['money','деньги'],['salary','зарплата'],['computer','компьютер'],
-    ['phone','телефон'],['letter','письмо'],['task','задача'],['company','компания'],
-    ['customer','клиент, покупатель'],['holiday','отпуск, праздник'],['price','цена'],['work','работа']]},
+    ['job','работа, должность','джоб'],['office','офис','Офис'],['boss','начальник','бос'],['colleague','коллега','кОлиг'],
+    ['meeting','встреча, собрание','мИтинг'],['money','деньги','мАни'],['salary','зарплата','сЭлэри'],['computer','компьютер','кэмпьЮтэр'],
+    ['phone','телефон','фоун'],['letter','письмо','лЭтэр'],['task','задача','тэск'],['company','компания','кАмпэни'],
+    ['customer','клиент, покупатель','кАстэмэр'],['holiday','отпуск, праздник','хОлидэй'],['price','цена','прайс'],['work','работа','вёрк']]},
   {key:'time', icon:'⏰', name:'Время', words:[
-    ['day','день'],['night','ночь'],['morning','утро'],['evening','вечер'],
-    ['week','неделя'],['month','месяц'],['year','год'],['today','сегодня'],
-    ['tomorrow','завтра'],['yesterday','вчера'],['hour','час'],['minute','минута'],
-    ['now','сейчас'],['always','всегда'],['never','никогда'],['often','часто'],
-    ['Monday','понедельник'],['weekend','выходные']]},
+    ['day','день','дэй'],['night','ночь','найт'],['morning','утро','мОрнинг'],['evening','вечер','Ивнинг'],
+    ['week','неделя','вик'],['month','месяц','манс'],['year','год','йир'],['today','сегодня','тудЭй'],
+    ['tomorrow','завтра','тумОроу'],['yesterday','вчера','йЕстэрдэй'],['hour','час','Ауэр'],['minute','минута','мИнит'],
+    ['now','сейчас','нау'],['always','всегда','Олвэйз'],['never','никогда','нЭвэр'],['often','часто','Офн'],
+    ['Monday','понедельник','мАндэй'],['weekend','выходные','уикЭнд']]},
   {key:'verbs', icon:'🏃', name:'Главные глаголы', words:[
-    ['be','быть'],['have','иметь'],['do','делать'],['go','идти, ехать'],
-    ['come','приходить'],['see','видеть'],['know','знать'],['want','хотеть'],
-    ['eat','есть, кушать'],['drink','пить'],['sleep','спать'],['speak','говорить'],
-    ['read','читать'],['write','писать'],['buy','покупать'],['live','жить'],
-    ['love','любить'],['help','помогать'],['learn','учить, изучать'],['work','работать']]},
+    ['be','быть','би'],['have','иметь','хэв'],['do','делать','ду'],['go','идти, ехать','гоу'],
+    ['come','приходить','кам'],['see','видеть','си'],['know','знать','ноу'],['want','хотеть','вонт'],
+    ['eat','есть, кушать','ит'],['drink','пить','дринк'],['sleep','спать','слип'],['speak','говорить','спик'],
+    ['read','читать','рид'],['write','писать','райт'],['buy','покупать','бай'],['live','жить','лив'],
+    ['love','любить','лав'],['help','помогать','хэлп'],['learn','учить, изучать','лёрн'],['work','работать','вёрк']]},
   {key:'adj', icon:'✨', name:'Описания (прилагательные)', words:[
-    ['big','большой'],['small','маленький'],['good','хороший'],['bad','плохой'],
-    ['new','новый'],['old','старый'],['hot','горячий, жаркий'],['cold','холодный'],
-    ['happy','счастливый'],['sad','грустный'],['fast','быстрый'],['slow','медленный'],
-    ['cheap','дешёвый'],['expensive','дорогой'],['easy','лёгкий'],['difficult','трудный'],
-    ['beautiful','красивый'],['young','молодой']]},
+    ['big','большой','биг'],['small','маленький','смол'],['good','хороший','гуд'],['bad','плохой','бэд'],
+    ['new','новый','нью'],['old','старый','оулд'],['hot','горячий, жаркий','хот'],['cold','холодный','коулд'],
+    ['happy','счастливый','хЭпи'],['sad','грустный','сэд'],['fast','быстрый','фэст'],['slow','медленный','слоу'],
+    ['cheap','дешёвый','чип'],['expensive','дорогой','икспЭнсив'],['easy','лёгкий','Изи'],['difficult','трудный','дИфикалт'],
+    ['beautiful','красивый','бьЮтифул'],['young','молодой','янг']]},
   {key:'colors', icon:'🎨', name:'Цвета и числа', words:[
-    ['red','красный'],['blue','синий'],['green','зелёный'],['yellow','жёлтый'],
-    ['black','чёрный'],['white','белый'],['one','один'],['two','два'],
-    ['three','три'],['four','четыре'],['five','пять'],['ten','десять'],
-    ['hundred','сто'],['thousand','тысяча'],['first','первый'],['last','последний']]},
+    ['red','красный','рэд'],['blue','синий','блу'],['green','зелёный','грин'],['yellow','жёлтый','йЕлоу'],
+    ['black','чёрный','блэк'],['white','белый','вайт'],['one','один','уан'],['two','два','ту'],
+    ['three','три','сри'],['four','четыре','фор'],['five','пять','файв'],['ten','десять','тэн'],
+    ['hundred','сто','хАндрэд'],['thousand','тысяча','сАузэнд'],['first','первый','фёрст'],['last','последний','лэст']]},
 ];
 const CUSTOM = {key:'custom', icon:'⭐', name:'Мои слова'};
 
@@ -226,8 +230,8 @@ function today(){ return dayNum(todayKey()); }
 // ---------- Слова ----------
 function allWords(){
   const list = [];
-  for(const t of TOPICS) t.words.forEach(([en,ru]) => list.push({id:t.key+':'+en, en, ru, topic:t.key}));
-  for(const c of S.custom) list.push({id:c.id, en:c.en, ru:c.ru, topic:'custom'});
+  for(const t of TOPICS) t.words.forEach(([en,ru,pr]) => list.push({id:t.key+':'+en, en, ru, pr, topic:t.key}));
+  for(const c of S.custom) list.push({id:c.id, en:c.en, ru:c.ru, pr:c.pr||'', topic:'custom'});
   return list;
 }
 function topicOn(key){ return S.topics[key] !== false; }
@@ -419,6 +423,7 @@ function frame(inner){
     </div>
     <div class="card stage">${inner}</div>`;
 }
+function pron(w, cls='pr'){ return w.pr ? `<div class="${cls}">[${esc(w.pr)}]</div>` : ''; }
 function speakBtn(text){ return `<button class="speak" title="Прослушать" onclick="speak(${esc(JSON.stringify(text))})">🔊</button>`; }
 
 function renderStep(){
@@ -432,7 +437,7 @@ function renderStep(){
 function renderIntro(w){
   introduce(w);
   frame(`<span class="badge new">Новое слово</span>
-    <div class="big">${esc(w.en)}</div>${speakBtn(w.en)}
+    <div class="big">${esc(w.en)}</div>${pron(w)}${speakBtn(w.en)}
     <div class="tr">${esc(w.ru)}</div>
     <div class="actions"><button class="btn primary" id="nx">Запомнил →</button></div>
     <div class="hint">Произнесите слово вслух пару раз. Клавиша Enter — дальше.</div>`);
@@ -443,7 +448,7 @@ function renderIntro(w){
 
 function renderCard(w){
   frame(`<span class="badge">Вспомните перевод</span>
-    <div class="big">${esc(w.en)}</div>${speakBtn(w.en)}
+    <div class="big">${esc(w.en)}</div>${pron(w)}${speakBtn(w.en)}
     <div id="back"></div>
     <div class="actions" id="act"><button class="btn primary" id="show">Показать перевод</button></div>
     <div class="hint" id="hint">Пробел — показать перевод</div>`);
@@ -475,8 +480,8 @@ function renderTest(w){
   const opts = shuffle([w, ...wrong]);
   frame(`<span class="badge">${toRu ? 'Выберите перевод' : 'Как это по-английски?'}</span>
     <div class="big">${esc(toRu ? w.en : w.ru)}</div>
-    ${toRu ? speakBtn(w.en) : ''}
-    <div class="opts">${opts.map((o,i) => `<button class="opt" data-i="${i}"><span class="k">${i+1}</span>${esc(o[field])}</button>`).join('')}</div>
+    ${toRu ? pron(w) + speakBtn(w.en) : ''}
+    <div class="opts">${opts.map((o,i) => `<button class="opt" data-i="${i}"><span class="k">${i+1}</span>${esc(o[field])}${toRu ? '' : pron(o,'pr-s')}</button>`).join('')}</div>
     <div class="actions" id="act"></div>
     <div class="hint">Клавиши 1–4 — выбрать ответ</div>`);
   if(toRu) autoSpeak(w.en);
@@ -532,6 +537,7 @@ function renderWrite(w){
     if(exact){ fb.className='fb ok'; fb.textContent='✓ Правильно!'; }
     else if(close){ fb.className='fb ok'; fb.innerHTML='✓ Почти! Правильно пишется: <b>'+esc(w.en)+'</b>'; }
     else { fb.className='fb no'; fb.innerHTML='✗ Правильный ответ: <b>'+esc(w.en)+'</b>'; }
+    fb.innerHTML += pron(w);
     grade(w, ok);
     speak(w.en);
     $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>`;
@@ -553,7 +559,7 @@ function renderDone(){
     <h2>Занятие окончено!</h2>
     ${total ? `<p class="muted">Правильных ответов: <b style="color:var(--text)">${right} из ${total} (${pct}%)</b></p>` : ''}
     ${mistakes.length ? `<div class="mistakes"><b>Над этими словами стоит поработать:</b>
-      <ul class="words">${mistakes.map(w => `<li><button class="speak mini" onclick="speakId('${esc(w.id)}')">🔊</button><span class="en">${esc(w.en)}</span><span class="muted">— ${esc(w.ru)}</span></li>`).join('')}</ul></div>` : ''}
+      <ul class="words">${mistakes.map(w => `<li><button class="speak mini" onclick="speakId('${esc(w.id)}')">🔊</button><span class="en">${esc(w.en)}</span>${w.pr ? `<span class="pr-s">[${esc(w.pr)}]</span>` : ''}<span class="muted">— ${esc(w.ru)}</span></li>`).join('')}</ul></div>` : ''}
     <div class="actions"><button class="btn primary" onclick="go('home')">На главную</button></div>
   </div>`;
 }
@@ -584,13 +590,15 @@ function renderDict(){
   app.innerHTML = `<div class="card">
       <h2>Добавить своё слово</h2>
       <div class="row">
-        <input type="text" id="addEn" class="grow" placeholder="слово: weather" style="flex:1 1 180px">
-        <input type="text" id="addRu" class="grow" placeholder="перевод: погода" style="flex:1 1 180px">
+        <input type="text" id="addEn" class="grow" placeholder="слово: weather" style="flex:1 1 140px">
+        <input type="text" id="addPr" class="grow" placeholder="звучит: уЭзэр" style="flex:1 1 140px">
+        <input type="text" id="addRu" class="grow" placeholder="перевод: погода" style="flex:1 1 140px">
         <button class="btn primary" onclick="addWord()">Добавить</button>
       </div>
+      <p class="muted small" style="margin:6px 0 0">Поле «звучит» можно не заполнять. Большой буквой удобно отмечать ударение.</p>
       <details style="margin-top:12px"><summary class="muted small" style="cursor:pointer">Добавить сразу много слов</summary>
-        <p class="muted small">Каждое слово с новой строки, через тире: <code>weather - погода</code></p>
-        <textarea id="bulk" rows="5" placeholder="weather - погода&#10;umbrella - зонт"></textarea>
+        <p class="muted small">Каждое слово с новой строки, через тире: <code>weather - погода</code> или со звучанием: <code>weather - погода - уЭзэр</code></p>
+        <textarea id="bulk" rows="5" placeholder="weather - погода - уЭзэр&#10;umbrella - зонт - амбрЭла"></textarea>
         <div class="row" style="margin-top:8px"><button class="btn" onclick="addBulk()">Добавить все</button></div>
       </details>
       <div id="addMsg" class="small" style="margin-top:8px"></div>
@@ -623,33 +631,35 @@ function drawWords(){
     const st = status(w), p = S.words[w.id];
     return `<li>
       <button class="speak mini" onclick="speakId('${esc(w.id)}')">🔊</button>
-      <span class="grow"><span class="en">${esc(w.en)}</span> <span class="muted">— ${esc(w.ru)}</span></span>
+      <span class="grow"><span class="en">${esc(w.en)}</span> ${w.pr ? `<span class="pr-s">[${esc(w.pr)}]</span>` : ''} <span class="muted">— ${esc(w.ru)}</span></span>
       ${p && p.bad>=2 ? `<span title="Ошибок: ${p.bad}">⚠️</span>` : ''}
       <span class="st ${st}">${names[st]}</span>
       ${w.topic==='custom' ? `<button class="x" title="Удалить" onclick="delWord('${esc(w.id)}')">✕</button>` : ''}
     </li>`; }).join('') : '<li class="muted">Ничего не найдено</li>';
 }
-function pushCustom(en, ru){
-  en = en.trim(); ru = ru.trim();
+function pushCustom(en, ru, pr=''){
+  en = en.trim(); ru = ru.trim(); pr = pr.trim().replace(/^\[|\]$/g,'');
   if(!en || !ru) return false;
   if(S.custom.some(c => norm(c.en)===norm(en))) return false;
-  S.custom.push({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), en, ru});
+  S.custom.push({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), en, ru, pr});
   return true;
 }
 function addWord(){
-  const en = $('#addEn').value, ru = $('#addRu').value, msg = $('#addMsg');
-  if(!en.trim() || !ru.trim()){ msg.className='small fb no'; msg.textContent='Заполните оба поля.'; return; }
-  if(!pushCustom(en, ru)){ msg.className='small fb no'; msg.textContent='Такое слово уже есть в «Моих словах».'; return; }
+  const en = $('#addEn').value, ru = $('#addRu').value, pr = $('#addPr').value, msg = $('#addMsg');
+  if(!en.trim() || !ru.trim()){ msg.className='small fb no'; msg.textContent='Заполните слово и перевод.'; return; }
+  if(!pushCustom(en, ru, pr)){ msg.className='small fb no'; msg.textContent='Такое слово уже есть в «Моих словах».'; return; }
   save();
-  $('#addEn').value=''; $('#addRu').value=''; $('#addEn').focus();
+  $('#addEn').value=''; $('#addPr').value=''; $('#addRu').value=''; $('#addEn').focus();
   msg.className='small fb ok'; msg.textContent='✓ Добавлено: '+en.trim()+'. Оно появится среди новых слов.';
   drawWords();
 }
 function addBulk(){
   let n = 0;
   for(const line of $('#bulk').value.split('\n')){
-    const m = line.match(/^(.+?)\s*[-–—:=]\s*(.+)$/);
-    if(m && pushCustom(m[1], m[2])) n++;
+    // Дефис без пробелов (как в T-shirt) — часть слова; разделитель — тире с пробелами, «—», «:» или «=»
+    let parts = line.split(/\s+-\s+|\s*[–—:=]\s*/);
+    if(parts.length < 2) parts = line.split('-');
+    if(parts.length >= 2 && pushCustom(parts[0], parts[1], parts[2] || '')) n++;
   }
   save();
   const msg = $('#addMsg');
