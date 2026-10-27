@@ -599,80 +599,112 @@ function saidRight(heard, w){
 function renderSay(w){
   frame(`<span class="badge">Скажите по-английски</span>
     <div class="big">${esc(w.ru)}</div>
-    <button class="mic" id="mic" title="Говорить">🎤</button>
-    <div class="fb muted" id="fb">Нажмите на микрофон и скажите слово</div>
-    <div class="actions" id="act"><button class="btn" id="skip">Не знаю</button></div>
-    <div class="hint">Пробел — говорить · Попыток: 2</div>`);
-  let tries = 0, finished = false;
+    <button class="mic" id="mic" title="Пауза / продолжить">🎤</button>
+    <div class="fb muted" id="fb">Включаю микрофон…</div>
+    <div class="actions" id="act">
+      <button class="btn" id="dunno">Не знаю</button>
+      <button class="btn" id="skip">Пропустить</button>
+    </div>
+    <div id="ovrBox"></div>
+    <div class="hint">Просто говорите, когда микрофон красный. Пробел — пауза.</div>`);
+  let tries = 0, revealed = false, finished = false, paused = false;
   const fb = $('#fb'), mic = $('#mic');
   const say = (cls, html) => { fb.className = 'fb ' + cls; fb.innerHTML = html; };
+  const stillHere = () => !finished && sess && sess.items[sess.i] && sess.items[sess.i].w === w;
+  const answerHtml = () => `Правильно: <b>${esc(w.en)}</b>` + pron(w);
 
-  // Ответ закончен: показываем правильное слово, оценку ставим по кнопке
-  const finish = (ok, heardText, canOverride) => {
+  // Слово сказано правильно — засчитываем и сами переходим дальше
+  const success = heardText => {
+    if(finished) return;
     finished = true; stopListening();
     mic.classList.remove('on'); mic.disabled = true;
-    if(ok){
-      say('ok', `✓ Правильно! Вы сказали: «${esc(heardText)}»` + pron(w));
-      grade(w, true); speak(w.en);
-      setTimeout(() => { if(sess && sess.items[sess.i] && sess.items[sess.i].w===w) next(); }, 1300);
-      $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>`;
-      $('#nx').onclick = next;
-      onKey = e => { if(e.key==='Enter'){ e.preventDefault(); next(); } };
-      return;
-    }
-    say('no', (heardText ? `Вы сказали: «${esc(heardText)}»<br>` : '') + `Правильно: <b>${esc(w.en)}</b>` + pron(w));
+    // С первых трёх попыток и без подсказки — слово считается выученным,
+    // иначе оно вернётся ещё раз в этом занятии и завтра
+    grade(w, !revealed && tries < 3);
+    say('ok', '✓ Правильно!' + (heardText ? ` Вы сказали: «${esc(heardText)}»` : '') + pron(w));
     speak(w.en);
-    const go = right => { grade(w, right); next(); };
-    $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>` +
-      (canOverride ? `<br><button class="link" id="ovr">Компьютер ошибся, засчитать</button>` : '');
-    $('#nx').onclick = () => go(false);
-    if(canOverride) $('#ovr').onclick = () => go(true);
-    onKey = e => { if(e.key==='Enter'){ e.preventDefault(); go(false); } };
+    $('#act').innerHTML = `<button class="btn primary" id="nx">Дальше →</button>`;
+    $('#ovrBox').innerHTML = '';
+    $('#nx').onclick = next;
+    onKey = e => { if(e.key==='Enter'){ e.preventDefault(); next(); } };
+    setTimeout(() => { if(sess && sess.items[sess.i] && sess.items[sess.i].w === w) next(); }, 1300);
+  };
+
+  const fatal = html => {
+    paused = true; stopListening(); mic.classList.remove('on');
+    say('no', html + '<br><button class="btn small" style="margin-top:10px" id="again">Попробовать снова</button>');
+    $('#again').onclick = resume;
   };
 
   const listen = () => {
-    if(finished || rec) return;
-    if('speechSynthesis' in window) speechSynthesis.cancel();
+    if(!stillHere() || paused || rec) return;
     const r = rec = new Recog();
-    r.lang = 'en-US'; r.interimResults = false; r.maxAlternatives = 5; r.continuous = false;
+    r.lang = 'en-US'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 5;
     // Сообщения от старого (уже остановленного) прослушивания не должны менять экран
-    const stale = () => r !== rec || finished;
-    let got = false;
+    const stale = () => r !== rec || !stillHere();
+    r.onstart = () => {
+      if(stale()) return;
+      mic.classList.add('on');
+      if(!tries && !revealed) say('muted', '🔴 Слушаю… говорите');
+    };
     r.onresult = e => {
       if(stale()) return;
-      got = true;
-      const heard = Array.from(e.results[0]).map(x => x.transcript);
-      rec = null; mic.classList.remove('on');
-      if(saidRight(heard, w)) return finish(true, heard[0]);
-      tries++;
-      if(tries < 2) say('no', `Вы сказали: «${esc(heard[0])}». Не совсем, попробуйте ещё раз.`);
-      else finish(false, heard[0], true);
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        const res = e.results[i];
+        const heard = Array.from(res).map(x => x.transcript.trim()).filter(Boolean);
+        if(!heard.length) continue;
+        if(saidRight(heard, w)) return success(heard[0]);
+        if(res.isFinal){
+          tries++;
+          say('no', `Вы сказали: «${esc(heard[0])}». Не то — скажите ещё раз.` + (revealed ? '<br>' + answerHtml() : ''));
+          $('#ovrBox').innerHTML = `<button class="link" id="ovr">Компьютер ошибся, засчитать</button>`;
+          $('#ovr').onclick = () => success('');
+        } else {
+          say('muted', `Слышу: «${esc(heard[0])}»…`);
+        }
+      }
     };
     r.onerror = e => {
       if(stale()) return;
-      got = true; rec = null; mic.classList.remove('on');
       const msgs = {
-        'no-speech':'Ничего не услышал. Нажмите на микрофон и скажите слово погромче.',
-        'not-allowed':'Нет доступа к микрофону. Нажмите на значок замка или микрофона слева в адресной строке и выберите «Разрешить».',
-        'service-not-allowed':'Нет доступа к микрофону. Разрешите его в настройках браузера.',
+        'not-allowed':'Нет доступа к микрофону. Нажмите на значок слева от адреса страницы (замок или микрофон) и выберите «Разрешить», затем нажмите кнопку ниже.',
+        'service-not-allowed':'Браузер не разрешает распознавание речи. Откройте программу в Google Chrome.',
         'network':'Для распознавания речи нужен интернет. Проверьте подключение.',
-        'audio-capture':'Микрофон не найден. Проверьте, что он подключён.'
+        'audio-capture':'Микрофон не найден. Проверьте, что он подключён и включён.'
       };
-      if(e.error !== 'aborted') say('no', msgs[e.error] || 'Не получилось распознать. Попробуйте ещё раз.');
+      if(msgs[e.error]) fatal(msgs[e.error]);
+      // 'no-speech' и 'aborted' — не ошибки: просто слушаем дальше
     };
-    r.onend = () => { if(stale() || got) return; rec = null; mic.classList.remove('on'); say('muted', 'Ничего не услышал. Нажмите на микрофон ещё раз.'); };
-    try{ r.start(); }catch(err){ rec = null; return; }
-    mic.classList.add('on');
-    say('muted', '🔴 Слушаю… говорите');
+    // Браузер сам выключает микрофон после паузы — включаем снова, пока слово на экране
+    r.onend = () => {
+      if(stale()) return;
+      rec = null; mic.classList.remove('on');
+      if(!paused) setTimeout(listenWhenQuiet, 250);
+    };
+    try{ r.start(); }catch(err){ rec = null; setTimeout(listenWhenQuiet, 500); }
   };
+  // Не слушаем, пока программа сама произносит слово, чтобы не услышать саму себя
+  const listenWhenQuiet = () => {
+    if(!stillHere() || paused) return;
+    if('speechSynthesis' in window && speechSynthesis.speaking) return setTimeout(listenWhenQuiet, 200);
+    listen();
+  };
+  const pause = () => {
+    paused = true; stopListening(); mic.classList.remove('on');
+    say('muted', '⏸ Пауза. Нажмите на микрофон или пробел, чтобы продолжить.');
+  };
+  function resume(){ paused = false; say('muted', 'Включаю микрофон…'); listenWhenQuiet(); }
 
-  mic.onclick = () => {
-    if(!rec) return listen();
-    stopListening(); mic.classList.remove('on');
-    say('muted', 'Нажмите на микрофон и скажите слово');
+  mic.onclick = () => paused ? resume() : pause();
+  $('#dunno').onclick = () => {
+    revealed = true; stopListening(); mic.classList.remove('on');
+    say('muted', answerHtml() + '<br>Повторите это слово вслух.');
+    speak(w.en);
+    if(!paused) setTimeout(listenWhenQuiet, 300);
   };
-  $('#skip').onclick = () => finish(false, '', false);
+  $('#skip').onclick = () => { if(finished) return; finished = true; stopListening(); grade(w, false); next(); };
   onKey = e => { if(e.key===' ' && !finished){ e.preventDefault(); mic.click(); } };
+  listenWhenQuiet();
 }
 
 function renderDone(){
