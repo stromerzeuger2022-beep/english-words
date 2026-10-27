@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Англ. слова">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
 <title>Английские слова</title>
 <style>
 :root{
@@ -116,6 +122,11 @@ label.line select{width:auto}
   .opts{grid-template-columns:1fr}
   .big{font-size:32px}
   nav button{padding:8px 9px}
+}
+/* На телефоне нет клавиатуры — подсказки про клавиши и их номера не нужны */
+@media (pointer:coarse){
+  .hint.keys, .opt .k{display:none}
+  button{-webkit-tap-highlight-color:transparent}
 }
 </style>
 </head>
@@ -454,7 +465,7 @@ function renderIntro(w){
     <div class="big">${esc(w.en)}</div>${pron(w)}${speakBtn(w.en)}
     <div class="tr">${esc(w.ru)}</div>
     <div class="actions"><button class="btn primary" id="nx">Запомнил →</button></div>
-    <div class="hint">Произнесите слово вслух пару раз. Клавиша Enter — дальше.</div>`);
+    <div class="hint">Произнесите слово вслух пару раз.</div>`);
   autoSpeak(w.en);
   $('#nx').onclick = next;
   onKey = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); next(); } };
@@ -465,7 +476,7 @@ function renderCard(w){
     <div class="big">${esc(w.en)}</div>${pron(w)}${speakBtn(w.en)}
     <div id="back"></div>
     <div class="actions" id="act"><button class="btn primary" id="show">Показать перевод</button></div>
-    <div class="hint" id="hint">Пробел — показать перевод</div>`);
+    <div class="hint keys" id="hint">Пробел — показать перевод</div>`);
   autoSpeak(w.en);
   const reveal = () => {
     $('#back').innerHTML = `<div class="tr flip">${esc(w.ru)}</div>`;
@@ -497,7 +508,7 @@ function renderTest(w){
     ${toRu ? pron(w) + speakBtn(w.en) : ''}
     <div class="opts">${opts.map((o,i) => `<button class="opt" data-i="${i}"><span class="k">${i+1}</span>${esc(o[field])}${toRu ? '' : pron(o,'pr-s')}</button>`).join('')}</div>
     <div class="actions" id="act"></div>
-    <div class="hint">Клавиши 1–4 — выбрать ответ</div>`);
+    <div class="hint keys">Клавиши 1–4 — выбрать ответ</div>`);
   if(toRu) autoSpeak(w.en);
   let answered = false;
   const choose = i => {
@@ -528,7 +539,7 @@ function renderWrite(w){
       <button class="btn" id="hintBtn">Подсказка</button>
       <button class="btn primary" id="chk">Проверить</button>
     </div>
-    <div class="hint">Enter — проверить</div>`);
+    <div class="hint keys">Enter — проверить</div>`);
   const inp = $('#inp'); inp.focus();
   let hints = 0, done = false;
   $('#hintBtn').onclick = () => {
@@ -570,10 +581,16 @@ function stopListening(){ if(rec){ rec.onresult = rec.onerror = rec.onend = null
 
 // Микрофон включаем по нажатию кнопки: только так Chrome надёжно спрашивает разрешение.
 // Поток держим открытым, пока идёт занятие, — по нему рисуем полоску громкости.
-let micStream = null, micLevel = 0;
+let micStream = null, micLevel = 0, micReady = false;
+// На телефонах микрофон нельзя делить с распознаванием речи: там только спрашиваем разрешение
+const IS_PHONE = matchMedia('(pointer:coarse)').matches;
 async function enableMic(){
-  if(micStream) return;
-  micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  if(micReady) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ micReady = true; return; }
+  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  micReady = true;
+  if(IS_PHONE){ stream.getTracks().forEach(t => t.stop()); return; }
+  micStream = stream;
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const an = ctx.createAnalyser(); an.fftSize = 512;
@@ -593,6 +610,7 @@ async function enableMic(){
   }catch(e){}
 }
 function disableMic(){
+  micReady = false;
   if(!micStream) return;
   micStream.getTracks().forEach(t => t.stop());
   if(micStream.ctx) micStream.ctx.close();
@@ -646,7 +664,7 @@ function renderSay(w){
       <button class="btn" id="skip">Пропустить</button>
     </div>
     <div id="ovrBox"></div>
-    <div class="hint">Просто говорите, когда микрофон красный. Пробел — пауза.</div>`);
+    <div class="hint">Просто говорите, когда микрофон красный. Нажмите на микрофон — пауза.</div>`);
   let tries = 0, revealed = false, finished = false, paused = false;
   const fb = $('#fb'), mic = $('#mic');
   const say = (cls, html) => { fb.className = 'fb ' + cls; fb.innerHTML = html; };
@@ -745,7 +763,8 @@ function renderSay(w){
   $('#skip').onclick = () => { if(finished) return; finished = true; stopListening(); grade(w, false); next(); };
   onKey = e => { if(e.key===' ' && !finished){ e.preventDefault(); mic.click(); } };
 
-  if(micStream) return listenWhenQuiet();
+  if(IS_PHONE) $('#lvl').style.display = 'none';
+  if(micReady) return listenWhenQuiet();
   // Первый раз за занятие — просим включить микрофон кнопкой
   paused = true;
   say('muted', 'Чтобы программа вас слышала, включите микрофон.');
